@@ -29,7 +29,7 @@ device_cols = ['Sub_metering_1','Sub_metering_2','Sub_metering_3']
 for col in device_cols:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
-df.fillna(method='ffill', inplace=True)
+df.fillna()
 
 # -----------------------------
 # HELPER FUNCTIONS
