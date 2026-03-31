@@ -7,175 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1dRKH2VL7qbOhCF7v_kfr9AYK50nr_Pmo
 """
 
-import pandas as pd
-df=pd.read_csv("cleaned_power_consumption.csv")
-df.head()
-
-df['Datetime'] = pd.to_datetime(df['Datetime'])
-df = df.sort_values('Datetime')
-
-df.columns
-
-y=df['Global_active_power']
-
-X = df[['Hour', 'Day', 'DayOfWeek', 'Month',
-        'IsWeekend',
-        'Lag_1', 'Lag_24',
-        'RollingMean_6', 'RollingMean_24']]
-
-from sklearn.linear_model import LinearRegression
-
-split = int(len(df)*0.8)
-
-X_train, X_test = X[:split], X[split:]
-y_train, y_test = y[:split], y[split:]
-
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-sns.set_style("whitegrid")
-
-df['Datetime'] = pd.to_datetime(df['Datetime'])
-
-df['Hour'] = df['Datetime'].dt.hour
-df['Day'] = df['Datetime'].dt.day
-df['Week'] = df['Datetime'].dt.isocalendar().week
-df['DayOfWeek'] = df['Datetime'].dt.day_name()
-
-hourly_avg = df.groupby('Hour')['Global_active_power'].mean()
-
-plt.figure(figsize=(10,5))
-hourly_avg.plot(marker='o')
-plt.title("Average Hourly Energy Consumption")
-plt.xlabel("Hour of Day")
-plt.ylabel("Average Global Active Power")
-plt.grid(True)
-plt.show()
-
-daily_avg = df.groupby('Day')['Global_active_power'].mean()
-
-plt.figure(figsize=(10,5))
-daily_avg.plot(marker='o', color='orange')
-plt.title("Average Daily Energy Consumption")
-plt.xlabel("Day of Month")
-plt.ylabel("Average Global Active Power")
-plt.grid(True)
-plt.show()
-
-weekly_avg = df.groupby('Week')['Global_active_power'].mean()
-
-plt.figure(figsize=(10,5))
-weekly_avg.plot(marker='o', color='green')
-plt.title("Average Weekly Energy Consumption")
-plt.xlabel("Week Number")
-plt.ylabel("Average Global Active Power")
-plt.grid(True)
-plt.show()
-
-dow_avg = df.groupby('DayOfWeek')['Global_active_power'].mean()
-dow_avg = dow_avg.reindex(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
-
-plt.figure(figsize=(10,5))
-dow_avg.plot(kind='bar', color='purple')
-plt.title("Energy Usage by Day of Week")
-plt.xlabel("Day")
-plt.ylabel("Average Global Active Power")
-plt.show()
-
-peak_hour = hourly_avg.idxmax()
-peak_value = hourly_avg.max()
-
-print("Peak Usage Hour:", peak_hour)
-print("Highest Average Consumption:", peak_value)
-
-def energy_suggestions(df):
-    suggestions = []
-
-    peak_hour = df.groupby('Hour')['Global_active_power'].mean().idxmax()
-
-    if peak_hour in range(18, 23):
-        suggestions.append("High consumption in evening (6PM–10PM). Reduce AC/heater usage.")
-
-    if df['IsWeekend'].mean() > 0.5:
-        suggestions.append("Weekend usage is high. Limit heavy appliances usage.")
-
-    if df['Global_active_power'].mean() > 1.5:
-        suggestions.append("Overall consumption is high. Consider energy-efficient appliances.")
-
-    return suggestions
-
-tips = energy_suggestions(df)
-
-print("Smart Energy Saving Suggestions:")
-for tip in tips:
-    print("-", tip)
-
-print("===== DASHBOARD SUMMARY =====")
-print("Average Consumption:", round(df['Global_active_power'].mean(),2))
-print("Maximum Consumption:", df['Global_active_power'].max())
-print("Minimum Consumption:", df['Global_active_power'].min())
-print("Peak Hour:", peak_hour)
-
-from google.colab import files
-import pandas as pd
-
-# Upload your CSV file
-uploaded = files.upload()
-# Make sure you select 'cleaned_power_consumption.csv'
-
-# Read the dataset
-df = pd.read_csv("cleaned_power_consumption.csv")
-df['Datetime'] = pd.to_datetime(df['Datetime'])
-df['Hour'] = df['Datetime'].dt.hour
-df['Day'] = df['Datetime'].dt.day
-df['Week'] = df['Datetime'].dt.isocalendar().week
-df['DayOfWeek'] = df['Datetime'].dt.day_name()
-df['IsWeekend'] = df['DayOfWeek'].isin(['Saturday','Sunday']).astype(int)
-
-print("Dataset loaded successfully! ✅")
-df.head()
-
-!pip install flask pyngrok
-
-!ngrok authtoken 39ks7HipobRDk6hPKeGqEbw1SRz_6Z5UcdckSk8864yYxresT
-
-pip freeze > requirements.txt
-
-with open("Procfile", "w") as f:
-    f.write("web: gunicorn app:app")
-
-!ls
-
-from google.colab import files
-
-files.download("Procfile")
-files.download("requirements.txt")
-files.download("cleaned_power_consumption (1).csv")   # or your correct csv name
-
-files.download("app.py")
-
-df = pd.read_csv("small_dataset.csv")
-
-import pandas as pd
-
-# Load your big dataset
-df = pd.read_csv("cleaned_power_consumption (1).csv")
-
-# Take first 40,000 rows (safe size under 25MB usually)
-df_small = df.head(40000)
-
-# Save as new CSV
-df_small.to_csv("small_dataset.csv", index=False)
-
-print("Small dataset created successfully!")
-
-from google.colab import files
-files.download("small_dataset.csv")
-
 from flask import Flask, render_template_string, request
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -186,9 +17,9 @@ from io import BytesIO
 app = Flask(__name__)
 
 # -----------------------------
-# LOAD DATA (small dataset for deployment)
+# LOAD DATA
 # -----------------------------
-df = pd.read_csv('small_dataset.csv')  # <- Make sure this file is in your repo
+df = pd.read_csv('small_dataset.csv')
 
 df['Datetime'] = pd.to_datetime(df['Datetime'], dayfirst=True)
 df.set_index('Datetime', inplace=True)
@@ -247,26 +78,23 @@ def index():
 
     grouped = grouped.tail(60)
 
+    # Graph 1
     fig1, ax1 = plt.subplots(figsize=(15,5))
     grouped.plot(ax=ax1, linewidth=2)
-    ax1.set_title(f"{period} Device Consumption", fontsize=15)
-    ax1.set_xlabel("Time", fontsize=12)
-    ax1.set_ylabel("Energy (Wh)", fontsize=12)
+    ax1.set_title(f"{period} Device Consumption")
     plt.xticks(rotation=45)
     plt.tight_layout()
     device_graph = plot_to_base64(fig1)
     plt.close(fig1)
 
+    # Graph 2 (prediction)
     total_series = grouped.sum(axis=1)
     forecast_values = simple_forecast(total_series, 7)
 
     fig2, ax2 = plt.subplots(figsize=(15,5))
-    ax2.plot(total_series.values, linewidth=2, label="Actual")
+    ax2.plot(total_series.values, label="Actual")
     ax2.plot(range(len(total_series), len(total_series)+7),
-             forecast_values, linestyle='--', linewidth=2, label="Predicted")
-    ax2.set_title("Future Energy Prediction (Next 7 Periods)", fontsize=15)
-    ax2.set_xlabel("Time", fontsize=12)
-    ax2.set_ylabel("Energy (Wh)", fontsize=12)
+             forecast_values, linestyle='--', label="Predicted")
     ax2.legend()
     plt.tight_layout()
     prediction_graph = plot_to_base64(fig2)
@@ -277,8 +105,7 @@ def index():
     html = f"""
     <h1 style='text-align:center;'>Smart Energy Dashboard</h1>
 
-    <form method="POST" style="margin-bottom:20px;">
-        <label>Select Period:</label>
+    <form method="POST">
         <select name="period">
             <option value="Daily">Daily</option>
             <option value="Weekly">Weekly</option>
@@ -287,18 +114,18 @@ def index():
         <button type="submit">Show</button>
     </form>
 
-    <h2>📊 Device Consumption</h2>
+    <h2>Device Consumption</h2>
     <img src="data:image/png;base64,{device_graph}" />
 
-    <h2>🔮 Future Prediction</h2>
+    <h2>Future Prediction</h2>
     <img src="data:image/png;base64,{prediction_graph}" />
 
-    <h2>⚠️ Alerts</h2>
+    <h2>Alerts</h2>
     <ul>
-    {''.join(f'<li style="color:red;">{a}</li>' for a in alerts) if alerts else '<li>No Alerts</li>'}
+    {''.join(f'<li>{a}</li>' for a in alerts) if alerts else '<li>No Alerts</li>'}
     </ul>
 
-    <h2>💡 Recommendations</h2>
+    <h2>Recommendations</h2>
     <ul>
     {''.join(f'<li>{s}</li>' for s in suggestions)}
     </ul>
@@ -307,7 +134,7 @@ def index():
     return render_template_string(html)
 
 # -----------------------------
-# RENDER-READY START
+# START
 # -----------------------------
 if __name__ == "__main__":
     import os
